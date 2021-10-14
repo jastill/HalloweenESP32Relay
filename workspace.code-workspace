@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "ESP32Relay",
+			"path": "ESP32Relay"
+		}
+	],
+	"settings": {}
+}

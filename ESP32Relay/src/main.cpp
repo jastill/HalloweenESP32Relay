@@ -14,7 +14,19 @@
 // Use Digital Pin 18 (requires matching pad on Relay Board bridging)
 #define RELAY_PIN   18
 
+// Manage the switch on and off
+enum State {
+  TURN_ON,
+  TURN_OFF,
+  RESET
+};
+
+enum State state = RESET;
+long timer = 0;
+#define SWITCH_PERIOD_MILLIS 300
+
 // Bluetooth Low Energy Callback
+// http://www.neilkolban.com/esp32/docs/cpp_utils/html/class_b_l_e_characteristic_callbacks.html 
 class MyCallbacks : public BLECharacteristicCallbacks
 {
   void onWrite(BLECharacteristic *pCharacteristic)
@@ -29,12 +41,8 @@ class MyCallbacks : public BLECharacteristicCallbacks
     // If we receive the character '1' turn on the relay. Else turn it off.
     if (value.length() > 0) {
       if(command[0] == '1') {
-        digitalWrite(RELAY_PIN,1);
-      } else {
-        digitalWrite(RELAY_PIN,0);
+        state = TURN_ON;
       }
-    } else {
-      digitalWrite(RELAY_PIN,0);
     }
   }
 };
@@ -64,13 +72,39 @@ void setup()
 
   pService->start();
 
+  // Set the advertizing power
+  esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P9);
+
   BLEAdvertising *pAdvertising = pServer->getAdvertising();
   pAdvertising->addServiceUUID(SERVICE_UUID);
 
   pAdvertising->start();
 }
 
+/**
+ * 
+ */
+void turnOnRelay() {
+  digitalWrite(RELAY_PIN,1);
+}
+
+/**
+ * 
+ */
+void turnOffRelay() {
+  digitalWrite(RELAY_PIN,0);
+}
+
 void loop()
 {
-  // Nothing to see here
+  if (state == TURN_ON) {
+    turnOnRelay();
+    timer = millis();
+    state = TURN_OFF;
+  }
+
+  if (state == TURN_OFF && (millis() - timer) > SWITCH_PERIOD_MILLIS) { 
+    turnOffRelay();
+    state = RESET;
+  }
 }
